@@ -1,0 +1,8 @@
+{
+    "name": "doc-roms/payment",
+    "description": "Symfony Bundle for Stripe and paypal integration",
+    "require": {
+        "stripe/stripe-php": "3.*",
+        "paypal/rest-api-sdk-php" : "0.5.*"
+    }
+}
