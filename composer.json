@@ -1,5 +1,5 @@
 {
-    "name": "docRoms/payment",
+    "name": "docroms/payment",
     "description": "Symfony Bundle for Stripe and paypal integration",
     "require": {
         "stripe/stripe-php": "3.*",
