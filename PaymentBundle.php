@@ -1,6 +1,6 @@
 <?php
 
-namespace Payment\PaymentBundle;
+namespace docroms\PaymentBundle;
 
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 

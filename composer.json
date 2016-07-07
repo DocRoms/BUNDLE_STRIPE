@@ -1,8 +1,12 @@
 {
-    "name": "docroms/payment",
+    "name": "docroms/payment-bundle",
     "description": "Symfony Bundle for Stripe and paypal integration",
     "require": {
         "stripe/stripe-php": "3.*",
         "paypal/rest-api-sdk-php" : "0.5.*"
-    }
+    },
+    "autoload": {
+        "psr-0": { "docroms\\Bundle\\PaymentBundle": "" }
+    },
+    "target-dir": "docroms/Bundle/PaymentBundle"
 }
