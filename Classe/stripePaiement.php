@@ -11,10 +11,10 @@ namespace docroms\Bundle\PaymentBundle\Classe;
 
 
 use Doctrine\ORM\EntityManager;
-use Payment\PaymentBundle\Entity\paymentCoupon;
-use Payment\PaymentBundle\Entity\paymentPlan;
-use Payment\PaymentBundle\Entity\paymentProfile;
-use Payment\PaymentBundle\Entity\paymentTransaction;
+use docroms\Bundle\PaymentBundle\Entity\paymentCoupon;
+use docroms\Bundle\PaymentBundle\Entity\paymentPlan;
+use docroms\Bundle\PaymentBundle\paymentProfile;
+use docroms\Bundle\PaymentBundle\paymentTransaction;
 use Stripe\Coupon;
 use Stripe\Stripe;
 use Stripe\Customer;
@@ -291,5 +291,13 @@ class stripePaiement implements genericPaiement
     public function getMandatoryFields()
     {
         return $this->_mandatoryFields;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function createOrGetOrder($args, $id)
+    {
+        // TODO: Implement createOrGetOrder() method.
     }
 }
