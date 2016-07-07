@@ -1,4 +1,4 @@
 services:
     payment.paiement:
-        class: Payment\PaymentBundle\Service\Paiement
+        class: docroms\Bundle\PaymentBundle\Service\Paiement
         arguments: [@doctrine.orm.entity_manager, @service_container]

@@ -1,5 +1,8 @@
 {
     "name": "docroms/payment-bundle",
+    "type": "symfony-bundle",
+    "keywords": ["payments", "payment", "stripe"],
+    "license": "MIT",
     "description": "Symfony Bundle for Stripe and paypal integration",
     "require": {
         "stripe/stripe-php": "3.*",

@@ -1,6 +1,6 @@
 <?php
 
-namespace Paiement\paiementBundle\Tests\Controller;
+namespace docroms\Bundle\PaymentBundle\Tests\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 

@@ -6,7 +6,7 @@
  * Time: 15:48
  */
 
-namespace Payment\PaymentBundle\Classe;
+namespace docroms\Bundle\PaymentBundle\Classe;
 
 
 class customerPaid

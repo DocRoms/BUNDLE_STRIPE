@@ -1,6 +1,6 @@
 <?php
 
-namespace Payment\PaymentBundle\Entity;
+namespace docroms\Bundle\PaymentBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
 

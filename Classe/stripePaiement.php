@@ -1,6 +1,6 @@
 <?php
 
-namespace Payment\PaymentBundle\Classe;
+namespace docroms\Bundle\PaymentBundle\Classe;
 
 /**
  * Created by PhpStorm.

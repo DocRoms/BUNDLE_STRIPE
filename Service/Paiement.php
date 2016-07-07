@@ -1,6 +1,6 @@
 <?php
 
-namespace Payment\PaymentBundle\Service;
+namespace docroms\Bundle\PaymentBundle\Service;
 
 use Doctrine\ORM\EntityManager;
 use Payment\PaymentBundle\Classe\genericPaiement;

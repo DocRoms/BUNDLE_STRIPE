@@ -1,6 +1,6 @@
 <?php
 
-namespace Payment\PaymentBundle\Repository;
+namespace docroms\Bundle\PaymentBundle\Repository;
 
 use Doctrine\ORM\EntityRepository;
 
