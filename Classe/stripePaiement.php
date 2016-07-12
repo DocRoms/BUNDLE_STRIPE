@@ -11,10 +11,10 @@ namespace docroms\Bundle\PaymentBundle\Classe;
 
 
 use Doctrine\ORM\EntityManager;
-use Payment\PaymentBundle\Entity\paymentCoupon;
-use Payment\PaymentBundle\Entity\paymentPlan;
-use Payment\PaymentBundle\Entity\paymentProfile;
-use Payment\PaymentBundle\Entity\paymentTransaction;
+use docroms\Bundle\PaymentBundle\Entity\paymentCoupon;
+use docroms\Bundle\PaymentBundle\Entity\paymentPlan;
+use docroms\Bundle\PaymentBundle\Entity\paymentProfile;
+use docroms\Bundle\PaymentBundle\Entity\paymentTransaction;
 use Stripe\Coupon;
 use Stripe\Stripe;
 use Stripe\Customer;
@@ -93,6 +93,15 @@ class stripePaiement implements genericPaiement
             }catch(\Exception $e){
                 var_dump($e->getMessage());
             }
+            //echo "<br> new ";
+            //var_dump($this->_customer);
+            //echo "<br>";
+        }else{
+            $this->_customer =  Customer::retrieve($result->getStripeId());
+            //echo "<br> retrive ";
+            //echo "<br>";
+            //var_dump($this->_customer);mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+            //echo "<br>";
         }
 
         // Retrived on DataBase
@@ -103,8 +112,24 @@ class stripePaiement implements genericPaiement
 
         $result = $qb->getQuery()->getOneOrNullResult();
 
+        // Todo: Join both request on same request.
+        // Retrived on DataBase
+        $repoTransaction = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
+        $qbTransac = $repoTransaction->createQueryBuilder('pt')
+            ->where('pt.profilePayementId = :profilePaymentId')
+            ->setParameter('profilePaymentId',$result->getId());
+
+        $resultTransac = $qbTransac->getQuery()->getOneOrNullResult();
+
+        //echo "transac - start ";
+        //var_dump($resultTransac);
+        //echo "transac - end";
+
         // Return the DataBase result.
         $custObject = new customerPaid();
+        if (!is_null($resultTransac)){
+            $custObject->setStripeSubscriptionId($resultTransac->getStripeSubscriptionId());
+        }
         $custObject->setWebsiteId($customerId);
         $custObject->setStripeId($result->getStripeId());
         $custObject->setProfilePaymentId($result->getId());
@@ -227,7 +252,7 @@ class stripePaiement implements genericPaiement
      * @param customerPaid $customer
      * @throws \Doctrine\ORM\NonUniqueResultException
      */
-    public function createSubscriptionByPlan($planId, $customer)
+    public function createOrGetSubscriptionByPlan($planId, $customer)
     {
         //Check if isset On DataBase.
         $repo = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
@@ -248,9 +273,11 @@ class stripePaiement implements genericPaiement
                 "plan" => $planId
             ));
 
+            //var_dump($this->_subscription);
             // Save Customer on Database
             $transactionPaid = new paymentTransaction();
             $transactionPaid->setProfilePayementId($customer->getProfilePaymentId());
+            $transactionPaid->setStripeSubscriptionId($this->_subscription->id);
             $transactionPaid->setPlanId($planId);
 
             try {
@@ -261,18 +288,55 @@ class stripePaiement implements genericPaiement
                 var_dump($e->getMessage());
             }
         }else{
-            throw new Exception('ANALYSE SUBSCRIPTION HERE BECAUSE ALREADY EXIST ON DATABASE...');
+            $repoTransaction = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
+            $qbTransac = $repoTransaction->createQueryBuilder('pt')
+                ->where('pt.profilePayementId = :profilePaymentId')
+                ->setParameter('profilePaymentId',$customer->getProfilePaymentId());
+
+            $resultTransac = $qbTransac->getQuery()->getOneOrNullResult();
+
+            $this->_subscription = Subscription::retrieve($resultTransac->getStripeSubscriptionId());
         }
+
+            // Retrived on DataBase
+            $repo = $this->_entityManager->getRepository('PaymentBundle:paymentProfile');
+            $qb = $repo->createQueryBuilder('pp')
+                ->where('pp.profileId = :profileId')
+                ->setParameter('profileId',$customer->getWebsiteId());
+
+            $result = $qb->getQuery()->getOneOrNullResult();
+
+            // Todo: Join both request on same request.
+            // Retrived on DataBase
+            $repoTransaction = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
+            $qbTransac = $repoTransaction->createQueryBuilder('pt')
+                ->where('pt.profilePayementId = :profilePaymentId')
+                ->setParameter('profilePaymentId',$result->getId());
+
+            $resultTransac = $qbTransac->getQuery()->getOneOrNullResult();
+
+            // Return the DataBase result.
+            $custObject = new customerPaid();
+            if (!is_null($resultTransac)){
+                $custObject->setStripeSubscriptionId($resultTransac->getStripeSubscriptionId());
+                $array = $this->_subscription->jsonSerialize();
+                $custObject->setIsStripeSubscriptionActive($array['status']);
+            }
+            $custObject->setWebsiteId($customer->getWebsiteId());
+            $custObject->setStripeId($result->getStripeId());
+
+            $custObject->setProfilePaymentId($result->getId());
+
+            return $custObject;
+
     }
 
     /**
      * @return mixed
      */
-    public function cancelSubscriptionByCustomerAndPlan($customerId, $planId)
+    public function cancelSubscriptionByCustomerAndPlan($customer, $planId)
     {
-        echo $this->_subscription->id;
-
-        Subscription::retrieve("sub_8lKhJYIQXK43lf");
+        Subscription::retrieve($customer->getStripeId());
         $lol = $this->_subscription->cancel();
 
         var_dump($lol);
@@ -291,5 +355,13 @@ class stripePaiement implements genericPaiement
     public function getMandatoryFields()
     {
         return $this->_mandatoryFields;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function createOrGetOrder($args, $id)
+    {
+        // TODO: Implement createOrGetOrder() method.
     }
 }

@@ -15,6 +15,10 @@ class customerPaid
 
     private $_stripeId;
 
+    private $_stripeSubscriptionId;
+
+    private $_isStripeSubscriptionActive;
+
     private $_paypalId;
 
     private $_websiteId;
@@ -30,6 +34,33 @@ class customerPaid
 
     public function setStripeId($id){
         $this->_stripeId = $id;
+    }
+
+    public function setStripeSubscriptionId($id){
+        $this->_stripeSubscriptionId = $id;
+    }
+
+    public function getStripeSubscriptionId(){
+        return $this->_stripeSubscriptionId;
+    }
+
+    /**
+     * @param $id string
+     */
+    public function setIsStripeSubscriptionActive($type){
+
+        $this->_isStripeSubscriptionActive = false;
+
+        if (strtolower($type) == 'active'){
+            $this->_isStripeSubscriptionActive = true;
+        }
+    }
+
+    /**
+     * @return boolean
+     */
+    public function isStripeSubscriptionActive(){
+        return $this->_isStripeSubscriptionActive;
     }
 
     public function getStripeId(){

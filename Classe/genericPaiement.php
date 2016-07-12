@@ -32,14 +32,18 @@ interface genericPaiement
     public function createOrGetOrder($args, $id);
 
     /**
-     * @return mixed
+     * @param $planId
+     * @param $customer customerPaid
+     * @return customerPaid
      */
-    public function createSubscriptionByPlan($planId, $customerId);
+    public function createOrGetSubscriptionByPlan($planId, $customer);
 
     /**
-     * @return mixed
+     * @param $customer customerPaid
+     * @param $planId
+     * @return customerPaid
      */
-    public function cancelSubscriptionByCustomerAndPlan($customerId, $planId);
+    public function cancelSubscriptionByCustomerAndPlan($customer, $planId);
 
     /**
      * @param $args

@@ -8,7 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
  * paymentTransaction
  *
  * @ORM\Table(name="payment_transaction")
- * @ORM\Entity(repositoryClass="Payment\PaymentBundle\Repository\paymentTransactionRepository")
+ * @ORM\Entity(repositoryClass="docroms\Bundle\PaymentBundle\Repository\paymentTransactionRepository")
  */
 class paymentTransaction
 {
@@ -48,6 +48,13 @@ class paymentTransaction
      * @ORM\Column(name="cupon_id", type="integer", nullable=true)
      */
     private $cuponId;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="stripe_subscription_id", type="string", nullable=true)
+     */
+    private $stripeSubscriptionId;
 
 
     /**
@@ -139,17 +146,40 @@ class paymentTransaction
     public function setCuponId($cuponId)
     {
         $this->cuponId = $cuponId;
-    
+
         return $this;
     }
 
     /**
      * Get cuponId
      *
-     * @return integer 
+     * @return integer
      */
     public function getCuponId()
     {
         return $this->cuponId;
+    }
+
+    /**
+     * Set stripeSubscriptionId
+     *
+     * @param integer $stripeSubscriptionId
+     * @return paymentTransaction
+     */
+    public function setStripeSubscriptionId($stripeSubscriptionId)
+    {
+        $this->stripeSubscriptionId = $stripeSubscriptionId;
+
+        return $this;
+    }
+
+    /**
+     * Get cuponId
+     *
+     * @return string
+     */
+    public function getStripeSubscriptionId()
+    {
+        return $this->stripeSubscriptionId;
     }
 }

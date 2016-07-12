@@ -10,7 +10,7 @@ namespace docroms\Bundle\PaymentBundle\Classe;
 
 
 use Doctrine\ORM\EntityManager;
-use Payment\PaymentBundle\Classe\customerPaid;
+use docroms\Bundle\PaymentBundle\Classe\customerPaid;
 use PayPal\Auth\OAuthTokenCredential;
 
 class paypalPaiment implements genericPaiement
@@ -101,5 +101,13 @@ class paypalPaiment implements genericPaiement
     public function createOrGetPlan($args, $id)
     {
         // TODO: Implement createOrGetPlan() method.
+    }
+
+    /**
+     * @return mixed
+     */
+    public function createOrGetOrder($args, $id)
+    {
+        // TODO: Implement createOrGetOrder() method.
     }
 }
