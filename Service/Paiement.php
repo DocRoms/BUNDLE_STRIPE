@@ -3,9 +3,9 @@
 namespace docroms\Bundle\PaymentBundle\Service;
 
 use Doctrine\ORM\EntityManager;
-use Payment\PaymentBundle\Classe\genericPaiement;
-use Payment\PaymentBundle\Classe\paypalPaiment;
-use Payment\PaymentBundle\Classe\stripePaiement;
+use docroms\Bundle\PaymentBundle\Classe\genericPaiement;
+use docroms\Bundle\PaymentBundle\Classe\paypalPaiment;
+use docroms\Bundle\PaymentBundle\Classe\stripePaiement;
 use Symfony\Component\DependencyInjection\Container;
 use Symfony\Component\DependencyInjection\Exception\ParameterNotFoundException;
 
