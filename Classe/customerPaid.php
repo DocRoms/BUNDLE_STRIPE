@@ -13,6 +13,8 @@ class customerPaid
 {
     private $_profilePaymentId;
 
+    private $_planId;
+
     private $_stripeId;
 
     private $_stripeSubscriptionId;
@@ -51,7 +53,8 @@ class customerPaid
 
         $this->_isStripeSubscriptionActive = false;
 
-        if (strtolower($type) == 'active'){
+        if (strtolower($type) == 'active'
+            || strtolower($type) == 'trialing'){
             $this->_isStripeSubscriptionActive = true;
         }
     }
@@ -73,6 +76,15 @@ class customerPaid
 
     public function getPaypalId(){
         return $this->_paypalId;
+    }
+
+
+    public function setPlanlId($id){
+        $this->_planId = $id;
+    }
+
+    public function getPlanId(){
+        return $this->_planId;
     }
 
     public function setWebsiteId($id){

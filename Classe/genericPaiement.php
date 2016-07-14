@@ -43,13 +43,27 @@ interface genericPaiement
      * @param $planId
      * @return customerPaid
      */
-    public function cancelSubscriptionByCustomerAndPlan($customer, $planId);
+    public function cancelSubscriptionByCustomerAndPlan($customer);
+
+    /**
+     * @param $customer customerPaid
+     * @param $planId
+     * @return customerPaid
+     */
+    public function updateSubscriptionByCustomerAndPlan($customer, $planId);
 
     /**
      * @param $args
      * @return customerPaid
      */
     public function createOrGetCustomer($args);
+
+    /**
+     * @param $customer customerPaid
+     * @param $args array
+     * @return customerPaid
+     */
+    public function updateCustomer($customer);
 
     /**
      * @return mixed

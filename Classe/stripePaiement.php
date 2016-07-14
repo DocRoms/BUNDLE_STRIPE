@@ -77,10 +77,28 @@ class stripePaiement implements genericPaiement
         // Create stripe user and Save on DataBase.
         if (is_null($result)){
             // Create Stripe User
-            $stripeArgs = array(
-                'description' => 'Création du customer stripe pour l\'id ' . $customerId,
-                'source' => $this->_mandatoryFields['stripeToken']
-            );
+            if (isset($this->_mandatoryFields['stripeToken']) && isset($this->_mandatoryFields['email'])){
+                $stripeArgs = array(
+                    'description' => 'Création du customer stripe pour l\'id ' . $customerId,
+                    'source' => $this->_mandatoryFields['stripeToken'],
+                    'email' => $this->_mandatoryFields['email']
+                );
+            }else if (isset($this->_mandatoryFields['stripeToken'])){
+                $stripeArgs = array(
+                    'description' => 'Création du customer stripe pour l\'id ' . $customerId,
+                    'source' => $this->_mandatoryFields['stripeToken']
+                );
+            }else if (isset($this->_mandatoryFields['email'])){
+                $stripeArgs = array(
+                    'description' => 'Création du customer stripe pour l\'id ' . $customerId,
+                    'email' => $this->_mandatoryFields['email']
+                );
+            }else{
+                $stripeArgs = array(
+                    'description' => 'Création du customer stripe pour l\'id ' . $customerId
+                );
+            }
+
             $this->_customer = Customer::create($stripeArgs);
 
             // Save on DataBase
@@ -100,7 +118,7 @@ class stripePaiement implements genericPaiement
             $this->_customer =  Customer::retrieve($result->getStripeId());
             //echo "<br> retrive ";
             //echo "<br>";
-            //var_dump($this->_customer);mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+            //var_dump($this->_customer);
             //echo "<br>";
         }
 
@@ -121,20 +139,38 @@ class stripePaiement implements genericPaiement
 
         $resultTransac = $qbTransac->getQuery()->getOneOrNullResult();
 
-        //echo "transac - start ";
-        //var_dump($resultTransac);
-        //echo "transac - end";
-
         // Return the DataBase result.
         $custObject = new customerPaid();
-        if (!is_null($resultTransac)){
-            $custObject->setStripeSubscriptionId($resultTransac->getStripeSubscriptionId());
+        if (!is_null($resultTransac))
+        {
+            try {
+                $this->_subscription = Subscription::retrieve($resultTransac->getStripeSubscriptionId());
+                $custObject->setStripeSubscriptionId($resultTransac->getStripeSubscriptionId());
+                $custObject->setPlanlId($resultTransac->getPlanId());
+                $array = $this->_subscription->jsonSerialize();
+                $custObject->setIsStripeSubscriptionActive($array['status']);
+            }catch(\Exception $e){
+                $custObject->setIsStripeSubscriptionActive($e->getMessage());
+            }
         }
         $custObject->setWebsiteId($customerId);
         $custObject->setStripeId($result->getStripeId());
+
         $custObject->setProfilePaymentId($result->getId());
 
         return $custObject;
+    }
+
+    /**
+     * @param $customer customerPaid
+     * @param $args array
+     * @return customerPaid
+     */
+    public function updateCustomer($customer)
+    {
+        $cu = Customer::retrieve($customer->getStripeId());
+        $cu->source = $this->_mandatoryFields['stripeToken']; // obtained with Stripe.js
+        $cu->save();
     }
 
     /**
@@ -319,6 +355,7 @@ class stripePaiement implements genericPaiement
             $custObject = new customerPaid();
             if (!is_null($resultTransac)){
                 $custObject->setStripeSubscriptionId($resultTransac->getStripeSubscriptionId());
+                $custObject->setPlanlId($resultTransac->getPlanId());
                 $array = $this->_subscription->jsonSerialize();
                 $custObject->setIsStripeSubscriptionActive($array['status']);
             }
@@ -332,14 +369,74 @@ class stripePaiement implements genericPaiement
     }
 
     /**
+     * @param $customer customerPaid
+     * @param $planId
+     * @return customerPaid
+     */
+    public function updateSubscriptionByCustomerAndPlan($customer, $planId)
+    {
+        try {
+            // Create Stripe Customer.
+            $this->_subscription = Subscription::retrieve($customer->getStripeSubscriptionId());
+            $this->_subscription->plan = $planId;
+            $this->_subscription->save();
+
+        }catch(\Exception $e){
+            // Subscription not found. (recreate subscription without trial period
+            // Create Stripe Customer.
+            $this->_subscription  = Subscription::create(array(
+                "customer" => $customer->getStripeId(),
+                "plan" => $planId,
+                "trial_end" => "now"
+            ));
+
+            $repo = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
+            $qb = $repo->createQueryBuilder('pt')
+                ->where('pt.profilePayementId = :profilePaymentId')
+                ->setParameters(
+                    array('profilePaymentId' => $customer->getProfilePaymentId() ));
+
+            $result = $qb->getQuery()->getOneOrNullResult();
+
+            if (!is_null($result)){
+                $result->setStripeSubscriptionId($this->_subscription->id);
+                $result->setPlanId($planId);
+
+                $this->_entityManager->persist($result);
+                $this->_entityManager->flush();
+            }
+        }
+        
+        // Update the plan on DataBase
+        //Check if isset On DataBase.
+        $repo = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
+        $qb = $repo->createQueryBuilder('pt')
+            ->where('pt.profilePayementId = :profilePaymentId')
+            ->setParameters(
+                array('profilePaymentId' => $customer->getProfilePaymentId() ));
+
+        $result = $qb->getQuery()->getOneOrNullResult();
+
+        if (!is_null($result)){
+            $result->setPlanId($planId);
+
+            $this->_entityManager->persist($result);
+            $this->_entityManager->flush();
+        }
+
+
+        $customer->setPlanlId($planId);
+
+        return $customer;
+    }
+
+    /**
      * @return mixed
      */
-    public function cancelSubscriptionByCustomerAndPlan($customer, $planId)
+    public function cancelSubscriptionByCustomerAndPlan($customer)
     {
-        Subscription::retrieve($customer->getStripeId());
-        $lol = $this->_subscription->cancel();
-
-        var_dump($lol);
+        $this->_subscription = Subscription::retrieve($customer->getStripeSubscriptionId());
+        $this->_subscription->cancel(array("at_period_end" => true ));
     }
 
     /**
