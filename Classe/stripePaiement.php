@@ -169,7 +169,13 @@ class stripePaiement implements genericPaiement
     public function updateCustomer($customer)
     {
         $cu = Customer::retrieve($customer->getStripeId());
-        $cu->source = $this->_mandatoryFields['stripeToken']; // obtained with Stripe.js
+
+        if (isset($this->_mandatoryFields['stripeToken'])) {
+            $cu->source = $this->_mandatoryFields['stripeToken']; // obtained with Stripe.js
+        }
+        if (isset($this->_mandatoryFields['email'])){
+            $cu->email = $this->_mandatoryFields['email'];
+        }
         $cu->save();
     }
 
