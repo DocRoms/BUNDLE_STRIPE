@@ -111,15 +111,9 @@ class stripePaiement implements genericPaiement
             }catch(\Exception $e){
                 var_dump($e->getMessage());
             }
-            //echo "<br> new ";
-            //var_dump($this->_customer);
-            //echo "<br>";
+
         }else{
             $this->_customer =  Customer::retrieve($result->getStripeId());
-            //echo "<br> retrive ";
-            //echo "<br>";
-            //var_dump($this->_customer);
-            //echo "<br>";
         }
 
         // Retrived on DataBase
