@@ -22,6 +22,11 @@ class paymentCoupon
     private $id;
 
     /**
+     * @ORM\Column(name="creation", type="datetime", nullable=false)
+     */
+    private $creation;
+
+    /**
      * @var int
      *
      * @ORM\Column(name="amount_off", type="integer", nullable=true)
@@ -38,10 +43,25 @@ class paymentCoupon
     /**
      * @var int
      *
+     * @ORM\Column(name="stripe_id", type="string", length=255)
+     */
+    private $stripeId;
+
+    /**
+     * @var int
+     *
      * @ORM\Column(name="times_redeemed", type="integer", nullable=true)
      */
     private $timesRedeemed;
 
+
+    /**
+     * Constructor
+     */
+    public function __construct()
+    {
+        $this->creation = new \DateTime();
+    }
 
     /**
      * Get id
@@ -108,17 +128,63 @@ class paymentCoupon
     public function setTimesRedeemed($timesRedeemed)
     {
         $this->timesRedeemed = $timesRedeemed;
-    
+
         return $this;
     }
 
     /**
      * Get timesRedeemed
      *
-     * @return integer 
+     * @return integer
      */
     public function getTimesRedeemed()
     {
         return $this->timesRedeemed;
+    }
+
+    /**
+     * Set timesRedeemed
+     *
+     * @param integer $stripeId
+     * @return paymentCoupon
+     */
+    public function setStripeId($stripeId)
+    {
+        $this->stripeId = $stripeId;
+
+        return $this;
+    }
+
+    /**
+     * Get timesRedeemed
+     *
+     * @return integer
+     */
+    public function getStripeId()
+    {
+        return $this->stripeId;
+    }
+
+    /**
+     * Set timesRedeemed
+     *
+     * @param \Datetime $creation
+     * @return paymentCoupon
+     */
+    public function setCreation($creation)
+    {
+        $this->creation = $creation;
+
+        return $this;
+    }
+
+    /**
+     * Get timesRedeemed
+     *
+     * @return \Datetime
+     */
+    public function getCreation()
+    {
+        return $this->creation;
     }
 }

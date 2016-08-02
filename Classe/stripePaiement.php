@@ -181,28 +181,32 @@ class stripePaiement implements genericPaiement
         if (!is_null($args))
         {
             $stripeArgs = $args;
+            $stripeArgs['duration'] = 'forever';
             unset($stripeArgs['description']);
+            unset($stripeArgs['time_redeemed']);
+            unset($stripeArgs['number_days']);
 
-            $repo = $this->_entityManager->getRepository('PaymentBundle:paymentCoupon');
-            $qb = $repo->createQueryBuilder('pc')
-                ->where('pc.amountOff = :amountOff')
-                ->orWhere('pc.prcentOff = :percentOff')
-                ->setParameters(
-                    array('amountOff'=> $args['amount_off'],
-                        'percentOff'=> $args['percent_off']
-                    ));
+            $result = null;
 
-            $result = $qb->getQuery()->getOneOrNullResult();
+            if (!is_null($id)){
+                $repo = $this->_entityManager->getRepository('PaymentBundle:paymentCoupon');
+                $qb = $repo->createQueryBuilder('pc')
+                    ->where('pc.stripeId = :id')
+                    ->setParameters(array('id'=>$id));
+
+                $result = $qb->getQuery()->getOneOrNullResult();
+            }
+
 
             if (is_null($result))
             {
                 $coupon = Coupon::create($stripeArgs);
 
-                var_dump($coupon);
-                
                 $couponPaid = new paymentCoupon();
                 $couponPaid->setAmountOff($args['amount_off']);
                 $couponPaid->setPrcentOff($args['percent_off']);
+                $couponPaid->setStripeId($coupon->id);
+                $couponPaid->setTimesRedeemed($args['time_redeemed']);
 
                 try {
                     $this->_entityManager->persist($couponPaid);
@@ -210,10 +214,14 @@ class stripePaiement implements genericPaiement
                 }catch(\Exception $e){
                     var_dump($e->getMessage());
                 }
+
+                return $coupon;
             }else{
                 throw new Exception('THIS COUPON ALREADY EXIST ON DATABASE...');
             }
         }
+
+        return null;
     }
 
     public function createOrGetPlan($args = null, $id = null)
