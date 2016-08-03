@@ -36,7 +36,7 @@ class paymentCoupon
     /**
      * @var int
      *
-     * @ORM\Column(name="prcent_off", type="integer")
+     * @ORM\Column(name="prcent_off", type="integer", nullable=true)
      */
     private $prcentOff;
 

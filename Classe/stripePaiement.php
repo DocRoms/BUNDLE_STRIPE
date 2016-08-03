@@ -181,7 +181,9 @@ class stripePaiement implements genericPaiement
         if (!is_null($args))
         {
             $stripeArgs = $args;
-            $stripeArgs['duration'] = 'forever';
+            $stripeArgs['duration'] = 'once';
+            $stripeArgs['max_redemptions'] = $args['time_redeemed'];
+            $stripeArgs["currency"] = "eur";
             unset($stripeArgs['description']);
             unset($stripeArgs['time_redeemed']);
             unset($stripeArgs['number_days']);
@@ -296,7 +298,7 @@ class stripePaiement implements genericPaiement
      * @param customerPaid $customer
      * @throws \Doctrine\ORM\NonUniqueResultException
      */
-    public function createOrGetSubscriptionByPlan($planId, $customer)
+    public function createOrGetSubscriptionByPlan($planId, $customer, $codeCupon)
     {
         //Check if isset On DataBase.
         $repo = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
@@ -311,11 +313,15 @@ class stripePaiement implements genericPaiement
 
         // Create Stripe Customer and Save On Database
         if (is_null($result)){
-            // Create Stripe Customer.
-            $this->_subscription  = Subscription::create(array(
+            $argsStripe = array(
                 "customer" => $customer->getStripeId(),
                 "plan" => $planId
-            ));
+            );
+            if (!is_null($codeCupon)){
+                $argsStripe['coupon'] = $codeCupon;
+            }
+            // Create Stripe Customer.
+            $this->_subscription  = Subscription::create($argsStripe);
 
             //var_dump($this->_subscription);
             // Save Customer on Database
