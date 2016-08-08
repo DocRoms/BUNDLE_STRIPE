@@ -16,6 +16,8 @@ use docroms\Bundle\PaymentBundle\Entity\paymentPlan;
 use docroms\Bundle\PaymentBundle\Entity\paymentProfile;
 use docroms\Bundle\PaymentBundle\Entity\paymentTransaction;
 use Stripe\Coupon;
+use Stripe\Invoice;
+use Stripe\InvoiceItem;
 use Stripe\Stripe;
 use Stripe\Customer;
 use Stripe\Subscription;
@@ -64,8 +66,15 @@ class stripePaiement implements genericPaiement
      * @return customerPaid
      * @throws \Doctrine\ORM\NonUniqueResultException
      */
-    public function createOrGetCustomer($customerId)
+    public function createOrGetCustomer($args)
     {
+        if (is_array($args)){
+            $customerId = $args['id'];
+            $customerDescription = $args['description'];
+        }else{
+            $customerId = $args;
+            $customerDescription = null;
+        }
         //Check if isset On DataBase.
         $repo = $this->_entityManager->getRepository('PaymentBundle:paymentProfile');
         $qb = $repo->createQueryBuilder('pp')
@@ -104,6 +113,7 @@ class stripePaiement implements genericPaiement
             // Save on DataBase
             $profilePaid = new paymentProfile();
             $profilePaid->setProfileId($customerId);
+            $profilePaid->setDescription($customerDescription);
             $profilePaid->setStripeId($this->_customer->id);
             try {
                 $this->_entityManager->persist($profilePaid);
@@ -118,13 +128,21 @@ class stripePaiement implements genericPaiement
 
         // Retrived on DataBase
         $repo = $this->_entityManager->getRepository('PaymentBundle:paymentProfile');
-        $qb = $repo->createQueryBuilder('pp')
-            ->where('pp.profileId = :profileId')
-            ->setParameter('profileId',$customerId);
+        if (is_null($customerDescription)){
+            $qb = $repo->createQueryBuilder('pp')
+                ->where('pp.profileId = :profileId')
+                ->setParameters(array('profileId'=>$customerId));
+        }else{
+            $qb = $repo->createQueryBuilder('pp')
+                ->where('pp.profileId = :profileId')
+                ->andWhere('pp.description = :description')
+                ->setParameters(array('profileId'=>$customerId, 'description' => $customerDescription));
+        }
 
+        $request = $qb->getQuery();
         $result = $qb->getQuery()->getOneOrNullResult();
 
-        // Todo: Join both request on same request.
+        // Todo: Join both request on same request
         // Retrived on DataBase
         $repoTransaction = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
         $qbTransac = $repoTransaction->createQueryBuilder('pt')
@@ -135,6 +153,7 @@ class stripePaiement implements genericPaiement
 
         // Return the DataBase result.
         $custObject = new customerPaid();
+
         if (!is_null($resultTransac))
         {
             try {
@@ -143,6 +162,20 @@ class stripePaiement implements genericPaiement
                 $custObject->setPlanlId($resultTransac->getPlanId());
                 $array = $this->_subscription->jsonSerialize();
                 $custObject->setIsStripeSubscriptionActive($array['status']);
+
+                // Create a specific args for retreive all users invoices.
+                $args = array(
+                    'customer' => $result->getStripeId(),
+                    'limit' => '100'
+                );
+
+                $invoices = Invoice::all($args);
+
+                $custObject->setBills($invoices->jsonSerialize()['data']);
+
+                //var_dump();
+                //die();
+
             }catch(\Exception $e){
                 $custObject->setIsStripeSubscriptionActive($e->getMessage());
             }
@@ -181,9 +214,7 @@ class stripePaiement implements genericPaiement
         if (!is_null($args))
         {
             $stripeArgs = $args;
-            $stripeArgs['duration'] = 'once';
-            $stripeArgs['max_redemptions'] = $args['time_redeemed'];
-            $stripeArgs["currency"] = "eur";
+            $stripeArgs['duration'] = 'forever';
             unset($stripeArgs['description']);
             unset($stripeArgs['time_redeemed']);
             unset($stripeArgs['number_days']);
@@ -298,7 +329,7 @@ class stripePaiement implements genericPaiement
      * @param customerPaid $customer
      * @throws \Doctrine\ORM\NonUniqueResultException
      */
-    public function createOrGetSubscriptionByPlan($planId, $customer, $codeCupon)
+    public function createOrGetSubscriptionByPlan($planId, $customer)
     {
         //Check if isset On DataBase.
         $repo = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
@@ -313,15 +344,11 @@ class stripePaiement implements genericPaiement
 
         // Create Stripe Customer and Save On Database
         if (is_null($result)){
-            $argsStripe = array(
+            // Create Stripe Customer.
+            $this->_subscription  = Subscription::create(array(
                 "customer" => $customer->getStripeId(),
                 "plan" => $planId
-            );
-            if (!is_null($codeCupon)){
-                $argsStripe['coupon'] = $codeCupon;
-            }
-            // Create Stripe Customer.
-            $this->_subscription  = Subscription::create($argsStripe);
+            ));
 
             //var_dump($this->_subscription);
             // Save Customer on Database
@@ -380,6 +407,64 @@ class stripePaiement implements genericPaiement
 
             return $custObject;
 
+    }
+
+    /**
+     * @param $startPeriod \DateTime
+     * @param $endPeriod \DateTime
+     * @return int
+     */
+    public function getMonthlyPayemntByPeriod($startPeriod, $endPeriod){
+        if (!is_object($startPeriod)){
+            $startPeriod = \DateTime::createFromFormat('Y-m-d H:i:s',$startPeriod);
+        }
+        if (!is_object($endPeriod)) {
+            $endPeriod = \DateTime::createFromFormat('Y-m-d', $endPeriod);
+        }
+
+        $args = array(
+            'limit' => '100',
+            'date' => array(
+                'gte' => $startPeriod->getTimestamp(),
+                'lte' => $endPeriod->getTimestamp())
+            );
+
+        $listOfSInvoice = Invoice::all($args);
+
+
+        $test = $listOfSInvoice->jsonSerialize();
+
+        $sumCalculate = 0;
+
+        if (isset($test) && !is_null($test) && !empty($test)) {
+            foreach ($test as $key => $value) {
+                // On rentre dans la liste des Invoices.
+                if ($key == 'data') {
+                    try {
+                        if (!is_null($key) && !empty($key) && !is_null($value) && !empty($value)) {
+                            foreach ($value as $val) {
+                                if ($val['amount_due'] > 0 && is_null($val['description'])) {
+                                    if ("month" == $val['lines']['data'][0]['plan']['interval']) {
+                                        $sumCalculate += $val['amount_due'];
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        //var_dump($e->getMessage());
+                        // TODO: Arggggg! C'est pas beau...
+                        // Ici, ca pete si l'index n'est pas défini et qu'il n'y a pas de données..
+                    }
+                }
+
+                if ($key == 'has_more' && $value == true) {
+                    var_dump('Contacter ROMUALD et lui dire qu\'il peut tester les multipages');
+                    Die();
+                }
+            }
+        }
+
+        return $sumCalculate;
     }
 
     /**
@@ -473,6 +558,89 @@ class stripePaiement implements genericPaiement
      */
     public function createOrGetOrder($args, $id)
     {
-        // TODO: Implement createOrGetOrder() method.
+        $stripeArgs = array(
+            "customer" => $args['customer'],
+            "amount" => (int) $args['amount'],
+            "currency" => "eur",
+            "description" => $args['description']
+        );
+
+        // Création d'un "item" a devoir à l'utilisateur.
+        $invoiceItem = InvoiceItem::create(array($stripeArgs));
+
+        //Création de la facture regroupant les items.
+        $invoice = Invoice::create(array(
+            "customer" => $args['customer']
+        ));
+
+        try {
+            // Payment de la facture
+            $paidInvoice = Invoice::retrieve($invoice->id);
+            $paidInvoice->pay();
+
+        }catch(\Exception $e){
+            var_dump($e->getMessage());
+            $paidInvoice = null;
+        }
+
+        return $paidInvoice;
+    }
+
+    /**
+     * @param $start \DateTime
+     * @param $end \DateTime
+     * @return mixed
+     */
+    public function getYearlyPayemntByPeriod($startPeriod, $endPeriod)
+    {
+        if (!is_object($startPeriod)){
+            $startPeriod = \DateTime::createFromFormat('Y-m-d H:i:s',$startPeriod);
+        }
+        if (!is_object($startPeriod)) {
+            $endPeriod = \DateTime::createFromFormat('Y-m-d H:i:s', $endPeriod);
+        }
+
+        $args = array(
+            'limit' => '100',
+            'date' => array(
+                'gte' => $startPeriod->getTimestamp(),
+                'lte' => $endPeriod->getTimestamp())
+        );
+
+        $listOfSInvoice = Invoice::all($args);
+
+        $test = $listOfSInvoice->jsonSerialize();
+
+        $sumCalculate = 0;
+
+        if (isset($test) && !is_null($test) && !empty($test)) {
+            foreach ($test as $key => $value) {
+                // On rentre dans la liste des Invoices.
+                if ($key == 'data') {
+                    try {
+                        if (!is_null($key) && !empty($key) && !is_null($value) && !empty($value)) {
+                            foreach ($value as $val) {
+                                if ($val['amount_due'] > 0 && is_null($val['description'])) {
+                                    if ("year" == $val['lines']['data'][0]['plan']['interval']) {
+                                        $sumCalculate += $val['amount_due'];
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        //var_dump($e->getMessage());
+                        // TODO: Arggggg! C'est pas beau...
+                        // Ici, ca pete si l'index n'est pas défini et qu'il n'y a pas de données..
+                    }
+                }
+
+                if ($key == 'has_more' && $value == true) {
+                    var_dump('Contacter ROMUALD et lui dire qu\'il peut tester les multipages');
+                    Die();
+                }
+            }
+        }
+
+        return $sumCalculate;
     }
 }

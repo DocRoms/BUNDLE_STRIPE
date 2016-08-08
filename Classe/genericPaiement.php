@@ -36,7 +36,7 @@ interface genericPaiement
      * @param $customer customerPaid
      * @return customerPaid
      */
-    public function createOrGetSubscriptionByPlan($planId, $customer, $codeCupon);
+    public function createOrGetSubscriptionByPlan($planId, $customer);
 
     /**
      * @param $customer customerPaid
@@ -51,6 +51,20 @@ interface genericPaiement
      * @return customerPaid
      */
     public function updateSubscriptionByCustomerAndPlan($customer, $planId);
+
+    /**
+     * @param $start \DateTime
+     * @param $end \DateTime
+     * @return mixed
+     */
+    public function getMonthlyPayemntByPeriod($start, $end);
+
+    /**
+     * @param $start \DateTime
+     * @param $end \DateTime
+     * @return mixed
+     */
+    public function getYearlyPayemntByPeriod($start, $end);
 
     /**
      * @param $args

@@ -23,7 +23,14 @@ class customerPaid
 
     private $_paypalId;
 
+    private $_accountType;
+
     private $_websiteId;
+
+    /**
+     * @var array
+     */
+    private $_bills;
 
 
     public function setProfilePaymentId($id){
@@ -50,6 +57,8 @@ class customerPaid
      * @param $id string
      */
     public function setIsStripeSubscriptionActive($type){
+
+        $this->_accountType = $type;
 
         $this->_isStripeSubscriptionActive = false;
 
@@ -95,5 +104,19 @@ class customerPaid
         return $this->_websiteId;
     }
 
+    public function setAccountType($type){
+        $this->_accountType = $type;
+    }
 
+    public function getAccountType(){
+        return $this->_accountType;
+    }
+
+    public function setBills($type){
+        $this->_bills = $type;
+    }
+
+    public function getBills(){
+        return $this->_bills;
+    }
 }

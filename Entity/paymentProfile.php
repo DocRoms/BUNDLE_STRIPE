@@ -24,9 +24,16 @@ class paymentProfile
     /**
      * @var int
      *
-     * @ORM\Column(name="profile_id", type="integer", unique=true)
+     * @ORM\Column(name="profile_id", type="integer")
      */
     private $profileId;
+
+    /**
+     * @var string
+     *
+     * @ORM\Column(name="description", type="string", nullable=true)
+     */
+    private $description;
 
     /**
      * @var string
@@ -108,17 +115,40 @@ class paymentProfile
     public function setPaypalId($paypalId)
     {
         $this->paypalId = $paypalId;
-    
+
         return $this;
     }
 
     /**
      * Get paypalId
      *
-     * @return integer 
+     * @return integer
      */
     public function getPaypalId()
     {
         return $this->paypalId;
+    }
+
+    /**
+     * Set Description
+     *
+     * @param string $description
+     * @return paymentProfile
+     */
+    public function setDescription($description)
+    {
+        $this->description = $description;
+
+        return $this;
+    }
+
+    /**
+     * Get Description
+     *
+     * @return string
+     */
+    public function getDescription()
+    {
+        return $this->description;
     }
 }
