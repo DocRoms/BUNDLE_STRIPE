@@ -142,14 +142,18 @@ class stripePaiement implements genericPaiement
         $request = $qb->getQuery();
         $result = $qb->getQuery()->getOneOrNullResult();
 
+        $resultTransac = null;
+
         // Todo: Join both request on same request
         // Retrived on DataBase
-        $repoTransaction = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
-        $qbTransac = $repoTransaction->createQueryBuilder('pt')
-            ->where('pt.profilePayementId = :profilePaymentId')
-            ->setParameter('profilePaymentId',$result->getId());
+        if (!is_null($result)) {
+            $repoTransaction = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
+            $qbTransac = $repoTransaction->createQueryBuilder('pt')
+                ->where('pt.profilePayementId = :profilePaymentId')
+                ->setParameter('profilePaymentId', $result->getId());
 
-        $resultTransac = $qbTransac->getQuery()->getOneOrNullResult();
+            $resultTransac = $qbTransac->getQuery()->getOneOrNullResult();
+        }
 
         // Return the DataBase result.
         $custObject = new customerPaid();
@@ -181,9 +185,11 @@ class stripePaiement implements genericPaiement
             }
         }
         $custObject->setWebsiteId($customerId);
-        $custObject->setStripeId($result->getStripeId());
 
-        $custObject->setProfilePaymentId($result->getId());
+        if (!is_null($result)) {
+            $custObject->setStripeId($result->getStripeId());
+            $custObject->setProfilePaymentId($result->getId());
+        }
 
         return $custObject;
     }
