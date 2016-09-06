@@ -16,6 +16,7 @@ use docroms\Bundle\PaymentBundle\Entity\paymentPlan;
 use docroms\Bundle\PaymentBundle\Entity\paymentProfile;
 use docroms\Bundle\PaymentBundle\Entity\paymentTransaction;
 use Stripe\Coupon;
+use Stripe\DiscountTest;
 use Stripe\Invoice;
 use Stripe\InvoiceItem;
 use Stripe\Stripe;
@@ -213,6 +214,17 @@ class stripePaiement implements genericPaiement
     }
 
     /**
+     * @param $customer customerPaid
+     * @return string
+     */
+    public function getPaiementSourceCustomer($customer)
+    {
+        $cu = Customer::retrieve($customer->getStripeId());
+
+        // On retourne la source par défault de la personne.
+        return $cu->default_source;
+    }
+    /**
      * @return mixed
      */
     public function createOrGetCoupon($args, $id)
@@ -222,8 +234,9 @@ class stripePaiement implements genericPaiement
             $stripeArgs = $args;
             $stripeArgs['duration'] = 'forever';
             unset($stripeArgs['description']);
-            unset($stripeArgs['time_redeemed']);
+            unset($stripeArgs['times_redeemed']);
             unset($stripeArgs['number_days']);
+            $stripeArgs['max_redemptions'] = $args['times_redeemed'];
 
             $result = null;
 
@@ -245,7 +258,7 @@ class stripePaiement implements genericPaiement
                 $couponPaid->setAmountOff($args['amount_off']);
                 $couponPaid->setPrcentOff($args['percent_off']);
                 $couponPaid->setStripeId($coupon->id);
-                $couponPaid->setTimesRedeemed($args['time_redeemed']);
+                $couponPaid->setTimesRedeemed($args['times_redeemed']);
 
                 try {
                     $this->_entityManager->persist($couponPaid);
@@ -335,7 +348,7 @@ class stripePaiement implements genericPaiement
      * @param customerPaid $customer
      * @throws \Doctrine\ORM\NonUniqueResultException
      */
-    public function createOrGetSubscriptionByPlan($planId, $customer)
+    public function createOrGetSubscriptionByPlan($planId, $customer, $cuponId)
     {
         //Check if isset On DataBase.
         $repo = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
@@ -351,24 +364,32 @@ class stripePaiement implements genericPaiement
         // Create Stripe Customer and Save On Database
         if (is_null($result)){
             // Create Stripe Customer.
-            $this->_subscription  = Subscription::create(array(
-                "customer" => $customer->getStripeId(),
-                "plan" => $planId
-            ));
+            if (!empty($planId)) {
 
-            //var_dump($this->_subscription);
-            // Save Customer on Database
-            $transactionPaid = new paymentTransaction();
-            $transactionPaid->setProfilePayementId($customer->getProfilePaymentId());
-            $transactionPaid->setStripeSubscriptionId($this->_subscription->id);
-            $transactionPaid->setPlanId($planId);
+                if (!empty($cuponId)){
+                    $this->_customer->coupon = $cuponId;
+                    $this->_customer->save();
+                }
 
-            try {
-                $this->_entityManager->persist($transactionPaid);
-                $this->_entityManager->flush();
-            }
-            catch(\Exception $e){
-                var_dump($e->getMessage());
+                $this->_subscription = Subscription::create(array(
+                    "customer" => $customer->getStripeId(),
+                    "plan" => $planId
+                ));
+
+                //var_dump($this->_subscription);
+                // Save Customer on Database
+                $transactionPaid = new paymentTransaction();
+                $transactionPaid->setProfilePayementId($customer->getProfilePaymentId());
+                $transactionPaid->setStripeSubscriptionId($this->_subscription->id);
+                $transactionPaid->setPlanId($planId);
+
+                try {
+                    $this->_entityManager->persist($transactionPaid);
+                    $this->_entityManager->flush();
+                } catch (\Exception $e) {
+                    var_dump($e->getMessage());
+                }
+
             }
         }else{
             $repoTransaction = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
@@ -436,7 +457,6 @@ class stripePaiement implements genericPaiement
             );
 
         $listOfSInvoice = Invoice::all($args);
-
 
         $test = $listOfSInvoice->jsonSerialize();
 
@@ -602,8 +622,8 @@ class stripePaiement implements genericPaiement
         if (!is_object($startPeriod)){
             $startPeriod = \DateTime::createFromFormat('Y-m-d H:i:s',$startPeriod);
         }
-        if (!is_object($startPeriod)) {
-            $endPeriod = \DateTime::createFromFormat('Y-m-d H:i:s', $endPeriod);
+        if (!is_object($endPeriod)) {
+            $endPeriod = \DateTime::createFromFormat('Y-m-d', $endPeriod);
         }
 
         $args = array(
@@ -615,10 +635,17 @@ class stripePaiement implements genericPaiement
 
         $listOfSInvoice = Invoice::all($args);
 
+
         $test = $listOfSInvoice->jsonSerialize();
 
         $sumCalculate = 0;
-
+        /*
+        var_dump($startPeriod);
+        echo "<br><br>";
+        var_dump($endPeriod);
+        echo "<br><br>";
+        var_dump($test);
+        die();*/
         if (isset($test) && !is_null($test) && !empty($test)) {
             foreach ($test as $key => $value) {
                 // On rentre dans la liste des Invoices.
@@ -628,7 +655,7 @@ class stripePaiement implements genericPaiement
                             foreach ($value as $val) {
                                 if ($val['amount_due'] > 0 && is_null($val['description'])) {
                                     if ("year" == $val['lines']['data'][0]['plan']['interval']) {
-                                        $sumCalculate += $val['amount_due'];
+                                        $sumCalculate += $val['amount_due'] / 12;
                                     }
                                 }
                             }

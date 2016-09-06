@@ -36,7 +36,7 @@ interface genericPaiement
      * @param $customer customerPaid
      * @return customerPaid
      */
-    public function createOrGetSubscriptionByPlan($planId, $customer);
+    public function createOrGetSubscriptionByPlan($planId, $customer, $cuponId);
 
     /**
      * @param $customer customerPaid
@@ -71,6 +71,12 @@ interface genericPaiement
      * @return customerPaid
      */
     public function createOrGetCustomer($args);
+
+    /**
+     * @param $args
+     * @return customerPaid
+     */
+    public function getPaiementSourceCustomer($args);
 
     /**
      * @param $customer customerPaid
