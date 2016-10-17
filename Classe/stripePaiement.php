@@ -362,7 +362,8 @@ class stripePaiement implements genericPaiement
         $result = $qb->getQuery()->getOneOrNullResult();
 
         // Create Stripe Customer and Save On Database
-        if (is_null($result)){
+        if (is_null($result))
+        {
             // Create Stripe Customer.
             if (!empty($planId)) {
 
@@ -402,38 +403,37 @@ class stripePaiement implements genericPaiement
             $this->_subscription = Subscription::retrieve($resultTransac->getStripeSubscriptionId());
         }
 
-            // Retrived on DataBase
-            $repo = $this->_entityManager->getRepository('PaymentBundle:paymentProfile');
-            $qb = $repo->createQueryBuilder('pp')
-                ->where('pp.profileId = :profileId')
-                ->setParameter('profileId',$customer->getWebsiteId());
+        // Retrived on DataBase
+        $repo = $this->_entityManager->getRepository('PaymentBundle:paymentProfile');
+        $qb = $repo->createQueryBuilder('pp')
+            ->where('pp.profileId = :profileId')
+            ->setParameter('profileId',$customer->getWebsiteId());
 
-            $result = $qb->getQuery()->getOneOrNullResult();
+        $result = $qb->getQuery()->getOneOrNullResult();
 
-            // Todo: Join both request on same request.
-            // Retrived on DataBase
-            $repoTransaction = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
-            $qbTransac = $repoTransaction->createQueryBuilder('pt')
-                ->where('pt.profilePayementId = :profilePaymentId')
-                ->setParameter('profilePaymentId',$result->getId());
+        // Todo: Join both request on same request.
+        // Retrived on DataBase
+        $repoTransaction = $this->_entityManager->getRepository('PaymentBundle:paymentTransaction');
+        $qbTransac = $repoTransaction->createQueryBuilder('pt')
+            ->where('pt.profilePayementId = :profilePaymentId')
+            ->setParameter('profilePaymentId',$result->getId());
 
-            $resultTransac = $qbTransac->getQuery()->getOneOrNullResult();
+        $resultTransac = $qbTransac->getQuery()->getOneOrNullResult();
 
-            // Return the DataBase result.
-            $custObject = new customerPaid();
-            if (!is_null($resultTransac)){
-                $custObject->setStripeSubscriptionId($resultTransac->getStripeSubscriptionId());
-                $custObject->setPlanlId($resultTransac->getPlanId());
-                $array = $this->_subscription->jsonSerialize();
-                $custObject->setIsStripeSubscriptionActive($array['status']);
-            }
-            $custObject->setWebsiteId($customer->getWebsiteId());
-            $custObject->setStripeId($result->getStripeId());
+        // Return the DataBase result.
+        $custObject = new customerPaid();
+        if (!is_null($resultTransac)){
+            $custObject->setStripeSubscriptionId($resultTransac->getStripeSubscriptionId());
+            $custObject->setPlanlId($resultTransac->getPlanId());
+            $array = $this->_subscription->jsonSerialize();
+            $custObject->setIsStripeSubscriptionActive($array['status']);
+        }
+        $custObject->setWebsiteId($customer->getWebsiteId());
+        $custObject->setStripeId($result->getStripeId());
 
-            $custObject->setProfilePaymentId($result->getId());
+        $custObject->setProfilePaymentId($result->getId());
 
-            return $custObject;
-
+        return $custObject;
     }
 
     /**
@@ -442,9 +442,13 @@ class stripePaiement implements genericPaiement
      * @return int
      */
     public function getMonthlyPayemntByPeriod($startPeriod, $endPeriod){
+
+        //echo "<br><br>IS MONTHLY PAYMENT <br><br>";
+
         if (!is_object($startPeriod)){
             $startPeriod = \DateTime::createFromFormat('Y-m-d H:i:s',$startPeriod);
         }
+
         if (!is_object($endPeriod)) {
             $endPeriod = \DateTime::createFromFormat('Y-m-d', $endPeriod);
         }
@@ -460,15 +464,27 @@ class stripePaiement implements genericPaiement
 
         $test = $listOfSInvoice->jsonSerialize();
 
+        /*echo 'Test 1 :<br>';
+        var_dump($test);
+        echo '<br><br><br><br>';*/
         $sumCalculate = 0;
 
         if (isset($test) && !is_null($test) && !empty($test)) {
+            $lastKey = null;
+            $lastValue = null;
+            $lastId = null; // @Todo : dernier Id à intégrer.
             foreach ($test as $key => $value) {
+                if ($key == 'has_more') {
+                    $lastKey = $key;
+                    $lastValue = $value;
+                }
                 // On rentre dans la liste des Invoices.
                 if ($key == 'data') {
                     try {
                         if (!is_null($key) && !empty($key) && !is_null($value) && !empty($value)) {
                             foreach ($value as $val) {
+                                $lastId = $val['id'];
+                                //echo "<br> last id conceptor == $lastId <br>";
                                 if ($val['amount_due'] > 0 && is_null($val['description'])) {
                                     if ("month" == $val['lines']['data'][0]['plan']['interval']) {
                                         $sumCalculate += $val['amount_due'];
@@ -482,14 +498,74 @@ class stripePaiement implements genericPaiement
                         // Ici, ca pete si l'index n'est pas défini et qu'il n'y a pas de données..
                     }
                 }
+            }
 
-                if ($key == 'has_more' && $value == true) {
-                    var_dump('Contacter ROMUALD et lui dire qu\'il peut tester les multipages');
-                    Die();
+            /*echo "Sum Before multiPage = " . $sumCalculate ."<br>";
+            echo 'last id => ' .$lastId. '<br>';
+            echo 'last key => ' .$lastKey. '<br>';
+            echo 'last value => ' .$lastValue. '<br>';*/
+
+            // TODO : Create a recursive function here.
+            While ($lastKey == 'has_more' && $lastValue == true) {
+                // check if exist.
+
+                //echo "in While loop <br>";
+                $secondArgs = array(
+                    'limit' => '100',
+                    'date' => array(
+                        'gte' => $startPeriod->getTimestamp(),
+                        'lte' => $endPeriod->getTimestamp()),
+                        'starting_after' => $lastId
+                );
+
+                $listOfSecondInvoice = Invoice::all($secondArgs);
+
+                $listing = $listOfSecondInvoice->jsonSerialize();
+
+
+                /*echo 'Listing 1 :<br>';
+                var_dump($listing);
+                echo '<br><br><br><br>';
+                echo 'last id => ' .$lastId;*/
+                if (isset($listing) && !is_null($listing) && !empty($listing)) {
+                    $lastKey = null;
+                    $lastValue = null;
+                    $lastId = null;
+
+                    foreach ($listing as $key => $value) {
+                        if ($key == 'has_more') {
+                            $lastKey = $key;
+                            $lastValue = $value;
+                        }
+                        // On rentre dans la liste des Invoices.
+                        if ($key == 'data') {
+                            try {
+                                if (!is_null($key) && !empty($key) && !is_null($value) && !empty($value)) {
+                                    foreach ($value as $val) {
+                                        $lastId = $val['id'];
+                                        if ($val['amount_due'] > 0 && is_null($val['description'])) {
+                                            if ("month" == $val['lines']['data'][0]['plan']['interval']) {
+                                                $sumCalculate += $val['amount_due'];
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (\Exception $e) {
+                                //var_dump($e->getMessage());
+                                // TODO: Arggggg! C'est pas beau...
+                                // Ici, ca pete si l'index n'est pas défini et qu'il n'y a pas de données..
+                            }
+                        }
+                    }
                 }
             }
+
+            // echo "Sum After multiPage = " . $sumCalculate. '<br>';
+
+            //Die();
         }
 
+        //echo "<br><br>IS MONTHLY PAYMENT <br><br>";
         return $sumCalculate;
     }
 
@@ -556,7 +632,7 @@ class stripePaiement implements genericPaiement
     }
 
     /**
-     * @return mixed
+     *
      */
     public function cancelSubscriptionByCustomerAndPlan($customer)
     {
@@ -613,12 +689,14 @@ class stripePaiement implements genericPaiement
     }
 
     /**
+     * Warning, this function use prorata (/12) for get the period
      * @param $start \DateTime
      * @param $end \DateTime
      * @return mixed
      */
     public function getYearlyPayemntByPeriod($startPeriod, $endPeriod)
     {
+        //echo "<br><br>IS YEARLY PAYMENT <br><br>";
         if (!is_object($startPeriod)){
             $startPeriod = \DateTime::createFromFormat('Y-m-d H:i:s',$startPeriod);
         }
@@ -634,18 +712,110 @@ class stripePaiement implements genericPaiement
         );
 
         $listOfSInvoice = Invoice::all($args);
-
-
         $test = $listOfSInvoice->jsonSerialize();
 
-        $sumCalculate = 0;
-        /*
-        var_dump($startPeriod);
-        echo "<br><br>";
-        var_dump($endPeriod);
-        echo "<br><br>";
+        /*echo 'Test 1 :<br>';
         var_dump($test);
-        die();*/
+        echo '<br><br><br><br>';*/
+        $sumCalculate = 0;
+
+        if (isset($test) && !is_null($test) && !empty($test)) {
+            $lastKey = null;
+            $lastValue = null;
+            $lastId = null; // @Todo : dernier Id à intégrer.
+            foreach ($test as $key => $value) {
+                if ($key == 'has_more') {
+                    $lastKey = $key;
+                    $lastValue = $value;
+                }
+                // On rentre dans la liste des Invoices.
+                if ($key == 'data') {
+                    try {
+                        if (!is_null($key) && !empty($key) && !is_null($value) && !empty($value)) {
+                            foreach ($value as $val) {
+                                $lastId = $val['id'];
+                                //echo "<br> last id conceptor == $lastId <br>";
+                                if ($val['amount_due'] > 0 && is_null($val['description'])) {
+                                    if ("year" == $val['lines']['data'][0]['plan']['interval']) {
+                                        $sumCalculate += $val['amount_due'] / 12;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        //var_dump($e->getMessage());
+                        // TODO: Arggggg! C'est pas beau...
+                        // Ici, ca pete si l'index n'est pas défini et qu'il n'y a pas de données..
+                    }
+                }
+            }
+
+           // echo "Sum Before multiPage = " . $sumCalculate ."<br>";
+           // echo 'last id => ' .$lastId. '<br>';
+
+            // TODO : Create a recursive function here.
+            While ($lastKey == 'has_more' && $lastValue == true) {
+                // check if exist.
+
+                //echo "in While loop <br>";
+                $secondArgs = array(
+                    'limit' => '100',
+                    'date' => array(
+                        'gte' => $startPeriod->getTimestamp(),
+                        'lte' => $endPeriod->getTimestamp()),
+                    'starting_after' => $lastId
+                );
+
+                $listOfSecondInvoice = Invoice::all($secondArgs);
+
+                $listing = $listOfSecondInvoice->jsonSerialize();
+
+
+                /*echo 'Listing 1 :<br>';
+                var_dump($listing);
+                echo '<br><br><br><br>';
+                echo 'last id => ' .$lastId;*/
+                if (isset($listing) && !is_null($listing) && !empty($listing)) {
+                    $lastKey = null;
+                    $lastValue = null;
+                    $lastId = null;
+
+                    foreach ($listing as $key => $value) {
+                        if ($key == 'has_more') {
+                            $lastKey = $key;
+                            $lastValue = $value;
+                        }
+                        // On rentre dans la liste des Invoices.
+                        if ($key == 'data') {
+                            try {
+                                if (!is_null($key) && !empty($key) && !is_null($value) && !empty($value)) {
+                                    foreach ($value as $val) {
+                                        $lastId = $val['id'];
+                                        if ($val['amount_due'] > 0 && is_null($val['description'])) {
+                                            if ("year" == $val['lines']['data'][0]['plan']['interval']) {
+                                                $sumCalculate += $val['amount_due'] / 12;
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (\Exception $e) {
+                                //var_dump($e->getMessage());
+                                // TODO: Arggggg! C'est pas beau...
+                                // Ici, ca pete si l'index n'est pas défini et qu'il n'y a pas de données..
+                            }
+                        }
+                    }
+                }
+
+            }
+
+            //echo "Sum After multiPage = " . $sumCalculate. '<br>';
+
+        }
+
+        /*$test = $listOfSInvoice->jsonSerialize();
+
+        $sumCalculate = 0;
         if (isset($test) && !is_null($test) && !empty($test)) {
             foreach ($test as $key => $value) {
                 // On rentre dans la liste des Invoices.
@@ -672,8 +842,9 @@ class stripePaiement implements genericPaiement
                     Die();
                 }
             }
-        }
+        }*/
 
+        //echo "<br><br>END IS YEARLY PAYMENT <br><br>";
         return $sumCalculate;
     }
 }

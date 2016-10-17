@@ -110,4 +110,63 @@ class paypalPaiment implements genericPaiement
     {
         // TODO: Implement createOrGetOrder() method.
     }
+
+    /**
+     * @param $planId
+     * @param $customer customerPaid
+     * @return customerPaid
+     */
+    public function createOrGetSubscriptionByPlan($planId, $customer, $cuponId)
+    {
+        // TODO: Implement createOrGetSubscriptionByPlan() method.
+    }
+
+    /**
+     * @param $customer customerPaid
+     * @param $planId
+     * @return customerPaid
+     */
+    public function updateSubscriptionByCustomerAndPlan($customer, $planId)
+    {
+        // TODO: Implement updateSubscriptionByCustomerAndPlan() method.
+    }
+
+    /**
+     * @param $start \DateTime
+     * @param $end \DateTime
+     * @return mixed
+     */
+    public function getMonthlyPayemntByPeriod($start, $end)
+    {
+        // TODO: Implement getMonthlyPayemntByPeriod() method.
+    }
+
+    /**
+     * @param $start \DateTime
+     * @param $end \DateTime
+     * @return mixed
+     */
+    public function getYearlyPayemntByPeriod($start, $end)
+    {
+        // TODO: Implement getYearlyPayemntByPeriod() method.
+    }
+
+    /**
+     * @param $args
+     * @return customerPaid
+     */
+    public function getPaiementSourceCustomer($args)
+    {
+        // TODO: Implement getPaiementSourceCustomer() method.
+    }
+
+    /**
+     * @param $customer customerPaid
+     * @param $args array
+     * @return customerPaid
+     */
+    public function updateCustomer($customer)
+    {
+        // TODO: Implement updateCustomer() method.
+    }
 }
